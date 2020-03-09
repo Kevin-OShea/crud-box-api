@@ -7,6 +7,8 @@ const multer  = require('multer')
 const upload = multer({ dest: 'uploads/' })
 // pull in Mongoose model for uploads
 const Upload = require('../models/upload')
+
+const s3Upload = require('./../../lib/s3Upload')
 // this is a collection of methods that help us detect situations when we need
 // to throw a custom error
 const customErrors = require('../../lib/custom_errors')
@@ -55,6 +57,21 @@ router.get('/uploads/:id', (req, res, next) => {
 router.post('/uploads', upload.single('avatar'), (req, res, next) => {
   console.log(req.body)
   console.log(req.file)
+  const path = req.file.path
+  const mimetype = req.file.mimetype
+  s3Upload(req.file.path)
+    .then((data) => {
+      const imageUrl = data.Location
+      const name = req.body.name
+      return Upload.create({
+        name: name,
+        imageUrl: imageUrl
+      })
+    })
+    .then(upload => {
+      res.status(201).json({ upload: upload.toObject() })
+    })
+    .catch()
   // set owner of new upload to be current user
   // req.body.upload.owner = req.user.id
   // ACCEPT A FILE HERE
